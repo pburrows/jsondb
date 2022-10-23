@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::path::Path;
-use positioned_io::{WriteAt, RandomAccessFile};
+use positioned_io::{WriteAt, RandomAccessFile, ReadAt};
 use serde::{Serialize, Deserialize};
 use serde_big_array::BigArray;
 
@@ -31,10 +31,24 @@ pub fn create_file(path: &Path) {
     (&file).write_at(0, &bytes).unwrap();
 }
 
+pub fn read_header(path: &Path, page: &u32) {
+    let bytes: Vec<u8> = read_page(path, page, 512);
+    let mut header: Option<FileHeader> = None;
+    let c_buf = bytes.as_ptr();
+    let s = c_buf as *mut FileHeader;
+    unsafe {
+        let ref s2 = *s;
+        header = Some(s2);
+    }
+    return header.unwrap();
+}
+
 pub fn read_page(path: &Path, page: &u32, page_size: &u16) {
-    let file = RandomAccessFile::open(path);
-    let mut buf: [u8;512] = [0;512];
-    (&file).read_at(page * page_size, &mut buf);
+    let file = RandomAccessFile::open(path).unwrap();
+    let mut buf = vec![0;*page_size as usize]; //u32::from(&page_size)];
+    let start_read: u64 = (page * (*page_size as u32)) as u64;
+    let bytes_read = (&file).read_at(start_read, &mut buf).unwrap();
+    return buf;
 }
 
 // #[cfg(test)]
